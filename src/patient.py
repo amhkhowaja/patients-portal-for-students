@@ -22,11 +22,13 @@ There should be a method to commit that patient to the database using the api_co
 import uuid
 from datetime import datetime
 from config import GENDERS, WARD_NUMBERS, ROOM_NUMBERS
-from api_controller import PatientAPIController  # Updated import statement
+from patient_db import PatientDB
+
+
 
 class Patient:
     def __init__(self, name, gender, age):
-        self.id = str(uuid.uuid4())  
+        self.id = None  
         self.name = name
         self.gender = gender
         self.age = age
@@ -36,19 +38,27 @@ class Patient:
         self.ward = None
 
 
-
-
     def set_room(self, room):
-        if room in ROOM_NUMBERS.values():
-            self.room = room
-        else:
-            raise ValueError("Invalid room number")
+       
+        for key,value in ROOM_NUMBERS.items():
+            if str(room) in value:
+                self.room = room
+                return 
+        
+        raise ValueError("Invalid room number")
 
     def set_ward(self, ward):
         if ward in WARD_NUMBERS:
             self.ward = ward
         else:
             raise ValueError("Invalid ward number")
+
+    def get_room(self):
+        return self.room
+
+    def get_ward(self):
+        return self.ward
+
 
     def get_id(self):
         return self.id
@@ -57,27 +67,21 @@ class Patient:
         return self.name
 
     def commit(self):
-        api_controller = PatientAPIController()
-        api_controller.create_patient({
-            "id": self.id,
-            "name": self.name,
-            "gender": self.gender,
-            "age": self.age,
-            "checkin": str(self.checkin),
-            "checkout": str(self.checkout),
-            "room": self.room,
-            "ward": self.ward
-        })
+        try:
+            self.id=str(uuid.uuid4())
+            PatientDB().insert_patient({
+                "patient_id":self.id,
+                "patient_name":self.name,
+                "patient_age":self.age,
+                "patient_gender":self.gender,
+                "patient_checkin":self.checkin,
+                "patient_checkout":self.checkout,
+                "patient_ward":self.ward,
+                "patient_room":self.room
+            })
 
+            return "Patient added to database successfully."
+        except Exception as e:
+            return f"Failed to add patient to database: {str(e)}"
         
     
-    def commit(self):
-       
-        existing_patient = Patient.query.filter_by(room=self.room, ward=self.ward).first()
-        if existing_patient:
-            existing_patient.name = self.name
-            existing_patient.age = self.age
-            db.session.commit()
-        else:
-            db.session.add(self)
-            db.session.commit()
